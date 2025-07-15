@@ -21,6 +21,8 @@ import json
 # The uvicorn library is used to run the API.
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+# Import database functions for storing listings
+from database import save_listing
                  
 # Create an instance of the FastAPI class.
 app = FastAPI()
@@ -340,6 +342,21 @@ def crawl_facebook_marketplace(city: str, query: str, max_price: int):
         # Return the parsed data as a JSON.
         result = []
         for item in parsed:
+            # Prepare data for database
+            listing_data = {
+                'title': item['title'],
+                'price': item['price'],
+                'location': item['location'],
+                'post_url': item['post_url'],
+                'image': item['image'],
+                'city': city,
+                'search_query': query
+            }
+            
+            # Save to database
+            save_listing(listing_data)
+            
+            # Keep existing response format
             result.append({
                 'name': item['title'],
                 'price': item['price'],

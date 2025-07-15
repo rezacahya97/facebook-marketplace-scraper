@@ -28,7 +28,9 @@ This program can be customized to your personal/organizational needs. For more i
 - Python 3.x
 - Playwright
 - Streamlit
-- BeautifulSoup 
+- BeautifulSoup
+- Supabase (for database storage)
+- python-dotenv (for environment variables) 
   
 ### Modules:
 - Playwright for web crawling
@@ -36,6 +38,8 @@ This program can be customized to your personal/organizational needs. For more i
 - FastAPI for API creation
 - JSON for data formatting
 - Uvicorn for running the server
+- Supabase for database storage and persistence
+- python-dotenv for environment variable management
  
 ### API:
 - Root: Displays a welcome message
@@ -45,6 +49,7 @@ This program can be customized to your personal/organizational needs. For more i
 ### Implementation
 - Browser automation and data scraping using Playwright
 - HTML content parsing with BeautifulSoup
+- Automatic database storage of all scraped listings in Supabase
 - Data returned in JSON format
 - Application server run using Uvicorn
 
@@ -53,3 +58,15 @@ This program can be customized to your personal/organizational needs. For more i
 - User inputs for city, search query, and maximum price.
 - Submission button to start scraping.
 - Display of scraping results including number of results, images, prices, locations, and item URLs.
+- Automatic database storage of all scraped listings for analytics and tracking.
+- Persistent data storage in Supabase with unique UUID generation.
+
+### Setup:
+1. Install requirements: `pip install -r requirements.txt`
+2. Create `.env` file with your Supabase credentials:
+   ```
+   SUPABASE_URL=your_supabase_project_url
+   SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+3. Run the FastAPI server: `python app.py`
+4. Run the Streamlit GUI: `streamlit run gui.py`
