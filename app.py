@@ -131,33 +131,262 @@ def crawl_facebook_marketplace(city: str, query: str, max_price: int):
         # Configure browser for Railway production environment
         is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('PORT')
         
+        # Strategy 1.1: Realistic Browser Configuration
+        # Set realistic Chrome User-Agent (current version)
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        
+        # =================================================================
+        # STRATEGY 1.3: SESSION & COOKIE MANAGEMENT  
+        # =================================================================
+        # Create persistent browser context to simulate real user session
+        
+        print("DEBUG: Strategy 1.3 - Creating persistent browser context")
+        
         if is_production:
             # Railway/containerized environment configuration
             browser = p.chromium.launch(
                 headless=True,
                 args=[
+                    # Security flags (required for Railway)
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
+                    '--disable-gpu',
+                    
+                    # Anti-detection flags (make browser look real)
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-features=VizDisplayCompositor',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                    '--disable-field-trial-config',
+                    '--disable-ipc-flooding-protection',
                     '--no-first-run',
-                    '--no-zygote',
-                    '--single-process',
-                    '--disable-gpu'
+                    '--no-default-browser-check',
+                    '--no-pings',
+                    '--password-store=basic',
+                    '--use-mock-keychain',
+                    
+                    # Window and display settings
+                    '--window-size=1920,1080',
+                    '--start-maximized',
+                    
+                    # User agent
+                    f'--user-agent={user_agent}'
                 ]
             )
         else:
-            # Local development configuration
+            # Local development configuration  
             browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
+            
+        # Strategy 1.3: Create browser context with persistent session
+        print("DEBUG: Creating browser context with session persistence")
+        context = browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+            user_agent=user_agent,
+            # Accept language and timezone for realism
+            locale="en-US",
+            timezone_id="America/New_York",
+            # Geolocation (optional - makes it more realistic)
+            permissions=["geolocation"],
+            geolocation={"latitude": 40.7128, "longitude": -74.0060},  # NYC coordinates
+            # Extra HTTP headers for realism
+            extra_http_headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "DNT": "1",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+            }
+        )
         
-        # Navigate directly to marketplace
-        print(f"DEBUG: Navigating to {marketplace_url}")
+        # Create page from context (inherits all settings)
+        page = context.new_page()
+        
+        print("DEBUG: Strategy 1.3 context created with realistic settings")
+        
+        # Remove webdriver property (anti-detection)
+        page.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined,
+            });
+            
+            // Add realistic navigator properties
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5], // Fake some plugins
+            });
+            
+            // Hide automation indicators
+            Object.defineProperty(navigator, 'permissions', {
+                get: () => ({
+                    query: () => Promise.resolve({ state: 'granted' })
+                }),
+            });
+        """)
+        
+        # =================================================================
+        # STRATEGY 1.3: SESSION SIMULATION & BROWSING HISTORY
+        # =================================================================
+        # Simulate real user browsing session before accessing marketplace
+        
+        import random  # Import random for human-like delays
+        print("DEBUG: Strategy 1.3 - Starting session simulation")
+        
+        # Step 1: Build browsing history by visiting related sites first
+        print("DEBUG: Step 1 - Building realistic browsing history")
+        
+        # Visit a news site first (common user behavior)
+        print("DEBUG: Visiting news site to build session history")
+        page.goto("https://www.cnn.com")
+        time.sleep(random.uniform(2.0, 4.0))
+        
+        # Add some scrolling and interaction
+        page.mouse.move(500, 300)
+        page.mouse.wheel(0, 200)
+        time.sleep(random.uniform(1.0, 2.0))
+        
+        # Step 2: Visit Facebook homepage (normal user flow)
+        print("DEBUG: Step 2 - Navigating to Facebook homepage")
+        page.goto("https://www.facebook.com")
+        time.sleep(random.uniform(3.0, 5.0))
+        
+        # Check and save cookies after Facebook homepage
+        cookies = context.cookies()
+        print(f"DEBUG: Collected {len(cookies)} cookies from Facebook homepage")
+        
+        # Simulate some browsing on Facebook homepage
+        print("DEBUG: Simulating Facebook homepage interaction")
+        page.mouse.move(400, 200)
+        time.sleep(random.uniform(1.0, 2.0))
+        page.mouse.wheel(0, 300)
+        time.sleep(random.uniform(2.0, 3.0))
+        
+        # Step 3: Add local storage and session storage (realistic browser state)
+        page.evaluate("""
+            // Add realistic localStorage data
+            localStorage.setItem('fb_last_visit', Date.now().toString());
+            localStorage.setItem('fb_user_preferences', '{"theme":"default","locale":"en_US"}');
+            
+            // Add realistic sessionStorage  
+            sessionStorage.setItem('fb_session_id', Math.random().toString(36));
+            sessionStorage.setItem('fb_page_loads', '3');
+        """)
+        
+        print("DEBUG: Added realistic localStorage and sessionStorage data")
+        
+        # Step 4: Check current page state before marketplace navigation
+        current_url = page.url
+        current_title = page.title()
+        
+        print(f"DEBUG: Pre-marketplace session state:")
+        print(f"DEBUG: Current URL: {current_url}")
+        print(f"DEBUG: Current title: {current_title}")
+        print(f"DEBUG: Cookies count: {len(context.cookies())}")
+        
+        print(f"DEBUG: Strategy 1.3 session setup complete")
+        print(f"DEBUG: User-Agent: {user_agent}")
+        print(f"DEBUG: Viewport: 1920x1080")
+        print(f"DEBUG: Geolocation: NYC coordinates")
+        print(f"DEBUG: Locale: en-US, Timezone: America/New_York")
+        
+        # =================================================================
+        # STRATEGY 1.2: HUMAN-LIKE BEHAVIOR PATTERNS
+        # =================================================================
+        # Instead of going directly to marketplace (bot-like), simulate real human browsing
+        
+        print("DEBUG: Strategy 1.2 - Starting human-like navigation pattern")
+        
+        # Step 1: Visit Facebook homepage first (like a real user)
+        print("DEBUG: Step 1 - Visiting Facebook homepage first")
+        page.goto("https://www.facebook.com")
+        
+        # Human-like delay after homepage load  
+        delay = random.uniform(2.0, 4.0)
+        print(f"DEBUG: Human-like delay: {delay:.2f} seconds")
+        time.sleep(delay)
+        
+        # Step 2: Simulate human cursor movement on homepage
+        print("DEBUG: Step 2 - Simulating human mouse movements")
+        # Move mouse to different areas of the page (like reading/browsing)
+        page.mouse.move(300, 200)  # Move to top area
+        time.sleep(random.uniform(0.5, 1.0))
+        page.mouse.move(600, 400)  # Move to center
+        time.sleep(random.uniform(0.5, 1.0))
+        page.mouse.move(900, 600)  # Move to different area
+        time.sleep(random.uniform(0.5, 1.0))
+        
+        # Step 3: Scroll down like a human browsing the page
+        print("DEBUG: Step 3 - Human-like scrolling behavior")
+        page.mouse.wheel(0, 300)  # Scroll down a bit
+        time.sleep(random.uniform(1.0, 2.0))
+        page.mouse.wheel(0, -150)  # Scroll back up (human-like)
+        time.sleep(random.uniform(1.0, 2.0))
+        
+        # Step 4: Now navigate to marketplace (more natural progression)
+        print(f"DEBUG: Step 4 - Now navigating to marketplace: {marketplace_url}")
         page.goto(marketplace_url)
         
-        # Wait for the page to load completely (listings load first)
-        print("DEBUG: Waiting for page to load...")
-        time.sleep(5)
+        # Step 5: Human-like wait and interaction on marketplace page
+        print("DEBUG: Step 5 - Human-like behavior on marketplace page")
+        # Longer initial wait (humans need time to read/process)
+        initial_delay = random.uniform(3.0, 6.0)
+        print(f"DEBUG: Initial marketplace load delay: {initial_delay:.2f} seconds")
+        time.sleep(initial_delay)
+        
+        # Simulate human reading/browsing the marketplace page
+        print("DEBUG: Simulating human browsing patterns on marketplace")
+        page.mouse.move(400, 300)  # Look at search area
+        time.sleep(random.uniform(1.0, 2.0))
+        
+        # Scroll down to see listings (like a human would)
+        print("DEBUG: Scrolling to view listings (human-like)")
+        page.mouse.wheel(0, 400)  # Scroll to see more listings
+        time.sleep(random.uniform(2.0, 3.0))
+        
+        # Additional small movements (humans rarely stay perfectly still)
+        page.mouse.move(600, 500)
+        time.sleep(random.uniform(1.0, 2.0))
+        
+        print("DEBUG: Strategy 1.2 complete - human-like behavior simulation finished")
+        
+        # =================================================================
+        # STRATEGY 1.2: RESULTS TRACKING & VALIDATION
+        # =================================================================
+        # Check if human-like behavior bypassed Facebook's bot detection
+        
+        print("DEBUG: Checking Strategy 1.2 results...")
+        current_url = page.url
+        current_title = page.title()
+        
+        print(f"DEBUG: Final page URL: {current_url}")
+        print(f"DEBUG: Final page title: {current_title}")
+        
+        # Check if we successfully reached marketplace vs login redirect
+        if "login" in current_url.lower():
+            print("❌ STRATEGY 1.2 FAILED: Still redirected to login page")
+            print("DEBUG: Facebook still detecting automation despite human-like behavior")
+        elif "marketplace" in current_url.lower():
+            print("✅ STRATEGY 1.2 SUCCESS: Reached marketplace page!")
+            print("DEBUG: Human-like behavior bypassed bot detection")
+        else:
+            print("⚠️ STRATEGY 1.2 UNKNOWN: Unexpected page reached")
+            print(f"DEBUG: Investigating unexpected URL: {current_url}")
+        
+        # Additional marketplace validation
+        html_sample = page.content()[:500]  # First 500 chars for debugging
+        if "marketplace" in html_sample.lower():
+            print("✅ HTML VALIDATION: Marketplace content detected in page source")
+        elif "login" in html_sample.lower():
+            print("❌ HTML VALIDATION: Login content detected in page source")
+        else:
+            print("⚠️ HTML VALIDATION: Unknown content type")
+        
+        print("DEBUG: Strategy 1.2 validation complete, proceeding with popup dismissal...")
         
         # POPUP DISMISSAL STRATEGY - Auto-dismiss "See more on Facebook" popup
         popup_dismissed = False
