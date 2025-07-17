@@ -128,7 +128,27 @@ def crawl_facebook_marketplace(city: str, query: str, max_price: int):
     # Initialize the session using Playwright.
     with sync_playwright() as p:
         # Open a new browser page.
-        browser = p.chromium.launch(headless=False)
+        # Configure browser for Railway production environment
+        is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('PORT')
+        
+        if is_production:
+            # Railway/containerized environment configuration
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-gpu'
+                ]
+            )
+        else:
+            # Local development configuration
+            browser = p.chromium.launch(headless=False)
         page = browser.new_page()
         
         # Navigate directly to marketplace
@@ -263,10 +283,13 @@ def crawl_facebook_marketplace(city: str, query: str, max_price: int):
                 # Get the item image - try multiple strategies
                 image = "No image found"
                 img_element = listing_container.find('img')
-                if img_element and hasattr(img_element, 'get'):
-                    src_val = img_element.get('src')
-                    if src_val and isinstance(src_val, str):
-                        image = src_val
+                if img_element:
+                    try:
+                        src_val = img_element.get('src')
+                        if src_val and isinstance(src_val, str):
+                            image = src_val
+                    except (AttributeError, TypeError):
+                        pass
 
                 # Get the item title - look for text in various span elements
                 title = "No title found"
@@ -419,11 +442,12 @@ def return_ip_information():
         }
 
 if __name__ == "__main__":
-
     # Run the app.
+    # Use Railway's PORT environment variable if available, otherwise default to 8000
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run(
         # Specify the app as the FastAPI app.
         'app:app',
-        host='127.0.0.1',
-        port=8000
+        host='0.0.0.0',  # Railway needs 0.0.0.0
+        port=port
     )
