@@ -2,13 +2,13 @@
 # This exposes the local Facebook Marketplace scraper to the internet securely
 
 # Tunnel configuration
-tunnel: marketplace-scraper-tunnel
-credentials-file: /Users/rezakumara/.cloudflared/marketplace-scraper-tunnel.json
+tunnel: f3a6a5f3-6e3b-463e-96a4-544c50b28202
+credentials-file: /Users/rezakumara/.cloudflared/f3a6a5f3-6e3b-463e-96a4-544c50b28202.json
 
 # Ingress rules - route traffic to local FastAPI server
 ingress:
   # Route all HTTP traffic to local FastAPI server
-  - hostname: "*.trycloudflare.com"
+  - hostname: "marketplace-scraper.resumematchs.com"
     service: http://localhost:8000
     originRequest:
       httpHostHeader: localhost:8000
