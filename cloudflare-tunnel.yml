@@ -1,0 +1,26 @@
+# Cloudflare Tunnel Configuration for Strategy 1: Local Tunnel Architecture
+# This exposes the local Facebook Marketplace scraper to the internet securely
+
+# Tunnel configuration
+tunnel: marketplace-scraper-tunnel
+credentials-file: /Users/rezakumara/.cloudflared/marketplace-scraper-tunnel.json
+
+# Ingress rules - route traffic to local FastAPI server
+ingress:
+  # Route all HTTP traffic to local FastAPI server
+  - hostname: "*.trycloudflare.com"
+    service: http://localhost:8000
+    originRequest:
+      httpHostHeader: localhost:8000
+      
+  # Fallback rule (required)
+  - service: http_status:404
+
+# Optional: Enable metrics for monitoring
+metrics: 0.0.0.0:2000
+
+# Optional: Logging configuration
+loglevel: info
+
+# Security settings
+no-autoupdate: false 

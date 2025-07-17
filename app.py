@@ -13,7 +13,7 @@ import os
 # The time library is used to add a delay to the script.
 import time
 # The BeautifulSoup library is used to parse the HTML.
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 # The FastAPI library is used to create the API.
 from fastapi import HTTPException, FastAPI
 # The JSON library is used to convert the data to JSON.
@@ -26,28 +26,44 @@ from database import save_listing
                  
 # Create an instance of the FastAPI class.
 app = FastAPI()
-# Configure CORS
+
+# Configure CORS for Strategy 1: Local Tunnel Architecture
+# Allow Supabase Edge Functions and Cloudflare Tunnel to access this API
 origins = [
     "http://localhost",
     "http://localhost:8000",
     "http://localhost:3000",
+    "https://*.supabase.co",  # Supabase Edge Functions
+    "https://*.cloudflareaccess.com",  # Cloudflare Tunnel domains
+    "https://*.trycloudflare.com",  # Cloudflare quick tunnels
+    "*"  # Allow all origins for tunnel access (will be secured by tunnel auth)
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allow all for tunnel - security handled by Cloudflare
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
+# Strategy 1: Add tunnel health check endpoint
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Cloudflare Tunnel and Supabase Edge Functions"""
+    return {
+        "status": "healthy",
+        "service": "Facebook Marketplace Scraper",
+        "strategy": "Local Tunnel Architecture",
+        "timestamp": time.time()
+    }
 
 # Create a route to the root endpoint.
 @app.get("/")
 # Define a function to be executed when the endpoint is called.
 def root():
     # Return a message.
-    return {"message": "Welcome to Passivebot's Facebook Marketplace API. Documentation is currently being worked on along with the API. Some planned features currently in the pipeline are a ReactJS frontend, MongoDB database, and Google Authentication."}
+    return {"message": "Welcome to Passivebot's Facebook Marketplace API via Cloudflare Tunnel. Strategy 1: Local Tunnel Architecture is active."}
 
     # TODO - Add documentation to the API.
     # TODO - Add a React frontend to the API.
@@ -242,20 +258,21 @@ def crawl_facebook_marketplace(city: str, query: str, max_price: int):
                 post_url = None
                 listing_container = None
                 
-                if listing.name == 'a' and listing.get('href') and '/marketplace/item/' in str(listing.get('href')):
+                if hasattr(listing, 'name') and listing.name == 'a' and hasattr(listing, 'get') and listing.get('href') and '/marketplace/item/' in str(listing.get('href')):
                     href_val = listing.get('href')
                     if isinstance(href_val, str):
                         post_url = 'https://www.facebook.com' + href_val
-                        listing_container = listing.parent
+                        listing_container = listing
                 else:
                     # If listing is not the link itself, find the link within it
                     link_elements = listing.find_all('a')
                     for link in link_elements:
-                        href_val = link.get('href')
-                        if href_val and isinstance(href_val, str) and '/marketplace/item/' in href_val:
-                            post_url = 'https://www.facebook.com' + href_val
-                            listing_container = listing
-                            break
+                        if hasattr(link, 'get'):
+                            href_val = link.get('href')
+                            if href_val and isinstance(href_val, str) and '/marketplace/item/' in href_val:
+                                post_url = 'https://www.facebook.com' + href_val
+                                listing_container = listing
+                                break
                 
                 if not post_url or not listing_container:
                     continue
@@ -263,7 +280,7 @@ def crawl_facebook_marketplace(city: str, query: str, max_price: int):
                 # Get the item image - try multiple strategies
                 image = "No image found"
                 img_element = listing_container.find('img')
-                if img_element and hasattr(img_element, 'get'):
+                if img_element and isinstance(img_element, Tag):
                     src_val = img_element.get('src')
                     if src_val and isinstance(src_val, str):
                         image = src_val
