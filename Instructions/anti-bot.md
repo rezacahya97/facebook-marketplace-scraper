@@ -466,3 +466,45 @@ async def robust_facebook_scraper():
 
 **Last Updated**: January 2025  
 **Next Review**: After Phase 1 completion
+
+
+--
+
+## 🧠 OP’s Core Learnings (2 Months of Web Scraping)
+
+- 🏎️ Use **lxml** for fast parsing.
+- 🔍 Prefer **API scraping** over parsing HTML when possible (check browser dev tools).
+- ⚙️ Use **multithreading** for speed where allowed.
+- 🚫 Avoid **Selenium** unless needed — it's heavy and detectable.
+- 🛡️ Learn how to bypass **anti-bot protections** (e.g., Cloudflare).
+- 🎭 Try **Playwright** with stealth plugins, but results may vary.
+- 🧠 Match **headers/user-agents** closely to mimic real browsers.
+- 🌐 Use **proxies** when scraping one site at scale — not necessary across multiple.
+- 🏘️ **Residential proxies** > Mobile proxies > Datacenter proxies (in that order).
+- 👀 Test headless detection using tools like [Am I Headless](https://amiunique.org/fp).
+- ☁️ Don’t use **AWS Lambda** for scraping with browsers — not ideal for that.
+- 🛠️ Understand both **detection techniques** and **evasion tactics**.
+- ⏱️ Add **random delays** (800ms–2s) and use back-off strategies after failures.
+- 📦 Run **browser pools** (e.g. multiple Playwright instances on EC2 for parallelism).
+
+---
+
+## 💬 Reddit Comments – Extra Tips & Resources
+
+- 🧰 Use browser dev tools (Network tab) or tools like **Charles Proxy**/**mitmproxy** to sniff APIs.
+- 🧠 Many apps fetch clean **JSON data** from backend APIs — easier to scrape than rendered pages.
+- 🧵 **Threading** + proper **headers** = fewer blocks and better performance.
+- 🧪 To check bot detection, use tools like **“Am I Headless”** and browser fingerprinting testers.
+- 🧱 Avoid **AWS Lambda** for scraping — try **ECS/Fargate**, **EKS**, or **EC2** instead.
+- 📈 One small EC2 instance can run 5+ headless browser instances if managed well.
+- 🔄 Use **randomized headers, delays, and retries** to stay under the radar.
+
+---
+
+## ✅ Key Takeaways
+
+- Use **structured API data** whenever possible — cleaner and less likely to be blocked.
+- Mimic **real browser behavior** with proper headers and stealth techniques.
+- Build scalable infra with **browser pools** and **smart proxy strategies**.
+- Stay updated on **anti-bot defenses** and always test your setup for detection.
+
