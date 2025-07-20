@@ -1,9 +1,3 @@
-# Description: DEBUG VERSION - Facebook Marketplace Scraper with HTML Analysis
-# This version adds extensive logging to debug VPS detection issues
-# Date: 2024-01-24
-# Author: Harminder Nijjar  
-# Version: 2.1.0 - DEBUG ENHANCED
-
 from playwright.sync_api import sync_playwright
 import os
 import time
