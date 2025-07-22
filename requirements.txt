@@ -7,3 +7,9 @@ streamlit==1.30.0
 uvicorn==0.25.0
 supabase==1.0.3
 python-dotenv==1.1.1
+
+# Phase 1: Cookie + Free Proxy Dependencies
+fake-useragent==1.4.0
+requests-toolbelt==1.0.0
+aiohttp==3.9.1
+random-user-agent==1.0.1
