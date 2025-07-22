@@ -1,10 +1,3 @@
-# Description: This file contains the code for Passivebot's Facebook Marketplace Scraper API.
-# Date: 2024-01-24
-# Author: Harminder Nijjar
-# Version: 1.0.0.
-# Usage: python app.py
-
-
 # Import the necessary libraries.
 # Playwright is used to crawl the Facebook Marketplace.
 from playwright.sync_api import sync_playwright
