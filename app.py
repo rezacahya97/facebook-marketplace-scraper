@@ -8,19 +8,78 @@
 from playwright.sync_api import sync_playwright
 import os
 import time
+import random
+import json
+import pickle
+import requests
+from pathlib import Path
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
-import json
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from database import save_listing
 from datetime import datetime
 
+# Phase 1: Simple Cookie & Proxy Management
+def save_cookies_simple(page, session_name="default"):
+    """Save cookies for session persistence"""
+    try:
+        cookies_dir = Path("cookies")
+        cookies_dir.mkdir(exist_ok=True)
+        cookies = page.context.cookies()
+        if cookies:
+            with open(cookies_dir / f"{session_name}.pkl", 'wb') as f:
+                pickle.dump(cookies, f)
+            print(f"🍪 Saved {len(cookies)} cookies")
+            return True
+    except Exception as e:
+        print(f"❌ Cookie save failed: {e}")
+    return False
+
+def load_cookies_simple(context, session_name="default"):
+    """Load cookies for session persistence"""
+    try:
+        cookie_file = Path("cookies") / f"{session_name}.pkl"
+        if cookie_file.exists():
+            with open(cookie_file, 'rb') as f:
+                cookies = pickle.load(f)
+            context.add_cookies(cookies)
+            print(f"🍪 Loaded {len(cookies)} cookies")
+            return True
+    except Exception as e:
+        print(f"❌ Cookie load failed: {e}")
+    return False
+
+def get_free_proxy():
+    """Get a free proxy for testing"""
+    try:
+        # Simple free proxy list (these change frequently)
+        proxy_list = [
+            "47.74.152.29:8888",
+            "103.149.162.194:80", 
+            "20.206.106.192:80"
+        ]
+        proxy = random.choice(proxy_list)
+        print(f"🌐 Using proxy: {proxy}")
+        return {"server": f"http://{proxy}"}
+    except Exception as e:
+        print(f"❌ Proxy failed: {e}")
+    return None
+
+def get_random_user_agent():
+    """Get random user agent for better stealth"""
+    agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ]
+    return random.choice(agents)
+
 # Create an instance of the FastAPI class.
 app = FastAPI(
-    title="Facebook Marketplace Scraper API",
-    description="VPS-optimized scraper with enhanced anti-detection",
-    version="2.0.0"
+    title="Facebook Marketplace Scraper API - Phase 1 Enhanced",
+    description="VPS scraper with cookies, proxies, and randomization",
+    version="2.1.0-phase1"
 )
 
 # Configure CORS for VPS deployment
@@ -67,16 +126,25 @@ def root():
 
 # New VPS-optimized scraping endpoint
 @app.post("/scrape")
-def scrape_marketplace(city: str, query: str, max_price: int):
-    """VPS scraping endpoint triggered by Supabase"""
+def scrape_marketplace(city: str, query: str, max_price: int, 
+                      use_cookies: bool = True, use_proxy: bool = True):
+    """Phase 1 enhanced scraping with cookies and proxies"""
     
     try:
-        print(f"🚀 VPS Scraper: Starting scrape for {city}, query: '{query}', max_price: ${max_price}")
+        print(f"🚀 PHASE 1 Scraper: Starting enhanced scrape")
+        print(f"📍 {city}, '{query}', ${max_price}")
+        print(f"🍪 Cookies: {use_cookies}, 🌐 Proxy: {use_proxy}")
         
-        # Enhanced anti-detection (VPS-optimized)
+        # Phase 1: Get proxy if enabled
+        proxy_config = None
+        if use_proxy:
+            proxy_config = get_free_proxy()
+        
+        # Enhanced anti-detection with Phase 1 features
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
+                proxy=proxy_config,  # Phase 1: Proxy support
                 args=[
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -86,20 +154,31 @@ def scrape_marketplace(city: str, query: str, max_price: int):
                     '--disable-features=VizDisplayCompositor',
                     '--disable-extensions',
                     '--disable-plugins',
-                    '--disable-images',  # Faster loading on VPS
+                    '--disable-images',
                     '--no-first-run',
                     '--no-default-browser-check',
                 ]
             )
             
+            # Phase 1: Enhanced context with randomization
             context = browser.new_context(
-                viewport={"width": 1920, "height": 1080},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={
+                    "width": random.randint(1366, 1920), 
+                    "height": random.randint(768, 1080)
+                },
+                user_agent=get_random_user_agent(),  # Phase 1: Random user agent
                 locale="en-US",
-                timezone_id="America/New_York",
-                geolocation={"longitude": -74.0059, "latitude": 40.7128},  # NYC coordinates
+                timezone_id=random.choice([
+                    "America/New_York", "America/Chicago", "America/Los_Angeles"
+                ]),
+                geolocation={"longitude": -74.0059, "latitude": 40.7128},
                 permissions=["geolocation"]
             )
+            
+            # Phase 1: Load cookies if enabled
+            cookies_loaded = False
+            if use_cookies:
+                cookies_loaded = load_cookies_simple(context)
             
             page = context.new_page()
             
@@ -132,16 +211,26 @@ def scrape_marketplace(city: str, query: str, max_price: int):
                 );
             """)
             
-            # Call existing scraping logic
+            # Call enhanced scraping logic
             results = scrape_facebook_marketplace_logic(page, city, query, max_price)
+            
+            # Phase 1: Save cookies if we successfully scraped and cookies are enabled
+            if use_cookies and not cookies_loaded and len(results) > 0:
+                save_cookies_simple(page, f"auto_{datetime.now().strftime('%Y%m%d_%H%M')}")
             
             browser.close()
             
-        print(f"✅ VPS Scraper: Found {len(results)} listings")
-        return {"success": True, "listings_found": len(results), "data": results}
+        print(f"✅ PHASE 1 Scraper: Found {len(results)} listings")
+        phase1_info = {
+            "cookies_used": use_cookies and cookies_loaded,
+            "proxy_used": use_proxy and proxy_config is not None,
+            "proxy_server": proxy_config.get('server') if proxy_config else None,
+            "enhancements_active": True
+        }
+        return {"success": True, "listings_found": len(results), "data": results, "phase1_info": phase1_info}
         
     except Exception as e:
-        print(f"❌ VPS Scraper failed: {str(e)}")
+        print(f"❌ PHASE 1 Scraper failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 def scrape_facebook_marketplace_logic(page, city, query, max_price):
@@ -204,11 +293,13 @@ def scrape_facebook_marketplace_logic(page, city, query, max_price):
     # Build marketplace URL
     marketplace_url = f'https://www.facebook.com/marketplace/{city_slug}/search/?query={query}&maxPrice={max_price}'
     
-    print(f"🌐 Navigating to: {marketplace_url}")
+    print(f"🌐 Enhanced Navigation to: {marketplace_url}")
     page.goto(marketplace_url)
     
-    # Wait for page load
-    time.sleep(5)
+    # Phase 1: Randomized wait instead of static 5 seconds
+    wait_time = random.uniform(3, 7)
+    print(f"⏱️ Random wait: {wait_time:.1f}s")
+    time.sleep(wait_time)
     
     # Enhanced popup dismissal strategy
     dismiss_popups(page)
@@ -221,12 +312,14 @@ def scrape_facebook_marketplace_logic(page, city, query, max_price):
     return parse_marketplace_listings(soup, city, query)
 
 def dismiss_popups(page):
-    """Enhanced popup dismissal for VPS"""
-    max_attempts = 3
+    """Phase 1 enhanced popup dismissal with randomization"""
+    max_attempts = random.randint(2, 4)  # Phase 1: Randomize attempts
     
     for attempt in range(max_attempts):
         try:
-            # Multiple close button selectors
+            # Phase 1: Random small delay before each attempt
+            time.sleep(random.uniform(0.5, 1.5))
+            
             close_selectors = [
                 'div[role="dialog"] button[aria-label="Close"]',
                 'div[role="dialog"] svg[aria-label="Close"]', 
@@ -240,20 +333,19 @@ def dismiss_popups(page):
                 if page.locator(selector).count() > 0:
                     page.locator(selector).first.click()
                     popup_found = True
-                    time.sleep(2)
+                    time.sleep(random.uniform(1, 2.5))  # Phase 1: Random timing
                     break
             
             if not popup_found:
-                # Try ESC key
                 if page.locator('div[role="dialog"]').count() > 0:
                     page.keyboard.press('Escape')
-                    time.sleep(2)
+                    time.sleep(random.uniform(1, 2))  # Phase 1: Random timing
                 else:
-                    break  # No popup detected
+                    break
                     
         except Exception as e:
             print(f"Popup dismissal error: {e}")
-            time.sleep(1)
+            time.sleep(random.uniform(0.5, 1))  # Phase 1: Random error delay
 
 def parse_marketplace_listings(soup, city, query):
     """Parse listings from HTML using existing selectors"""
